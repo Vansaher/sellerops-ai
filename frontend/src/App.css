@@ -311,6 +311,120 @@
   padding: 20px;
 }
 
+/* Content Studio: one platform-tinted column per platform */
+
+.content-platform-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+}
+
+@media (max-width: 900px) {
+  .content-platform-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.content-platform-card {
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.content-platform-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.content-photo-slot {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.content-photo-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.content-asset-block {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.photo-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+  align-items: center;
+}
+
+.photo-gallery-item {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+
+.photo-gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.photo-gallery-active {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.photo-gallery-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.photo-gallery-remove:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -629,6 +743,9 @@
 }
 
 .platform-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -645,8 +762,8 @@
 }
 
 .platform-tab.active {
-  color: var(--accent-hover);
-  border-bottom-color: var(--accent);
+  color: var(--tab-color, var(--accent-hover));
+  border-bottom-color: var(--tab-color, var(--accent));
   font-weight: 500;
 }
 
@@ -746,6 +863,23 @@
   align-self: flex-end;
   background: var(--accent-bg);
   border-bottom-right-radius: 2px;
+}
+
+.chat-bubble-editing {
+  max-width: 95%;
+  width: 95%;
+}
+
+.chat-compose {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.chat-compose .field {
+  flex: 1;
 }
 
 .chat-empty {

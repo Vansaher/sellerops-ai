@@ -49,6 +49,15 @@ class Product(Base):
         return None
 
 
+class ProductPhoto(Base):
+    __tablename__ = "product_photos"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
+    image_path: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
 class Inventory(Base):
     __tablename__ = "inventory"
 

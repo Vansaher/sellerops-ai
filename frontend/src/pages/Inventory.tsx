@@ -17,6 +17,8 @@ export default function Inventory({ onNavigateToBroadcast }: InventoryProps) {
   const [restockingId, setRestockingId] = useState<number | null>(null);
   const [restockAmount, setRestockAmount] = useState("");
   const [form, setForm] = useState(emptyForm);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [existingPhotoPath, setExistingPhotoPath] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const loadAll = () =>
@@ -47,6 +49,7 @@ export default function Inventory({ onNavigateToBroadcast }: InventoryProps) {
     if (!form.name || !form.sku || !form.price) return;
     setSaving(true);
     try {
+      let productId = editingProductId;
       if (editingProductId !== null) {
         await api.updateProduct(editingProductId, {
           name: form.name,
@@ -55,16 +58,22 @@ export default function Inventory({ onNavigateToBroadcast }: InventoryProps) {
           sku: form.sku,
         });
       } else {
-        await api.createProduct({
+        const created = await api.createProduct({
           name: form.name,
           description: form.description,
           price: Number(form.price),
           sku: form.sku,
           stock_qty: Number(form.stockQty) || 0,
         });
+        productId = created.id;
+      }
+      if (productId !== null && photoFile) {
+        await api.uploadProductPhoto(productId, photoFile);
       }
       await loadAll();
       setForm(emptyForm);
+      setPhotoFile(null);
+      setExistingPhotoPath(null);
       setEditingProductId(null);
       setView("list");
     } finally {
@@ -80,12 +89,16 @@ export default function Inventory({ onNavigateToBroadcast }: InventoryProps) {
       sku: product.sku,
       stockQty: String(product.stock_qty),
     });
+    setPhotoFile(null);
+    setExistingPhotoPath(product.image_path);
     setEditingProductId(product.id);
     setView("edit");
   };
 
   const handleCancelForm = () => {
     setForm(emptyForm);
+    setPhotoFile(null);
+    setExistingPhotoPath(null);
     setEditingProductId(null);
     setView("list");
   };
@@ -135,6 +148,30 @@ export default function Inventory({ onNavigateToBroadcast }: InventoryProps) {
               onChange={(e) => setForm((f) => ({ ...f, stockQty: e.target.value }))}
             />
           )}
+
+          <div className="simulate-row">
+            {photoFile ? (
+              <img
+                src={URL.createObjectURL(photoFile)}
+                alt="Selected"
+                style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 4 }}
+              />
+            ) : existingPhotoPath ? (
+              <img
+                src={assetUrl(existingPhotoPath)}
+                alt="Current"
+                style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 4 }}
+              />
+            ) : (
+              <span className="pill">No photo</span>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
+            />
+          </div>
+
           <div className="btn-row">
             <button type="button" className="btn btn-primary" disabled={saving} onClick={handleSave}>
               Save
@@ -161,7 +198,8 @@ export default function Inventory({ onNavigateToBroadcast }: InventoryProps) {
         </button>
       </div>
 
-      <table className="data-table">
+      <div className="card">
+        <table className="data-table">
         <thead>
           <tr>
             <th>Photo</th>
@@ -290,7 +328,8 @@ export default function Inventory({ onNavigateToBroadcast }: InventoryProps) {
             );
           })}
         </tbody>
-      </table>
+        </table>
+      </div>
     </section>
   );
 }

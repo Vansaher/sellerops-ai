@@ -13,6 +13,23 @@ def list_messages(seller_id: int = 1, db: Session = Depends(get_db)):
     return db.query(models.Message).filter(models.Message.seller_id == seller_id).all()
 
 
+@router.post("/send", response_model=schemas.MessageOut)
+def send_message(body: schemas.MessageSend, seller_id: int = 1, db: Session = Depends(get_db)):
+    message = models.Message(
+        seller_id=seller_id,
+        platform=body.platform,
+        thread_id=body.thread_id,
+        customer_name=body.customer_name,
+        sender="seller",
+        body=body.body,
+        status="sent",
+    )
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+    return message
+
+
 @router.post("/{message_id}/draft-reply", response_model=schemas.MessageOut)
 def draft_reply(message_id: int, db: Session = Depends(get_db)):
     source = db.get(models.Message, message_id)

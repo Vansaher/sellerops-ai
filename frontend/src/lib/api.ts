@@ -67,6 +67,13 @@ export interface Product {
   image_path: string | null;
 }
 
+export interface ProductPhoto {
+  id: number;
+  product_id: number;
+  image_path: string;
+  created_at: string;
+}
+
 export const assetUrl = (path: string) => `${API_BASE}${path}`;
 
 export const api = {
@@ -92,11 +99,16 @@ export const api = {
     if (!response.ok) throw new Error(`POST /products/${productId}/photo failed: ${response.status}`);
     return response.json() as Promise<Product>;
   },
+  listProductPhotos: (productId: number) => request<ProductPhoto[]>(`/products/${productId}/photos`),
+  deleteProductPhoto: (productId: number, photoId: number) =>
+    request<Product>(`/products/${productId}/photos/${photoId}`, { method: "DELETE" }),
   listMessages: () => request<Message[]>("/inbox"),
   draftReply: (messageId: number) =>
     request<Message>(`/inbox/${messageId}/draft-reply`, { method: "POST" }),
   updateMessage: (id: number, body: { body?: string; status: string }) =>
     request<Message>(`/inbox/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  sendMessage: (body: { platform: string; thread_id: string; customer_name?: string | null; body: string }) =>
+    request<Message>("/inbox/send", { method: "POST", body: JSON.stringify(body) }),
   listContentAssets: (productId?: number) =>
     request<ContentAsset[]>(`/content${productId ? `?product_id=${productId}` : ""}`),
   generateContent: (productId: number, platforms: string[]) =>
@@ -106,6 +118,10 @@ export const api = {
     }),
   updateContentAsset: (id: number, body: { body?: string; status: string }) =>
     request<ContentAsset>(`/content/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteContentAsset: async (id: number) => {
+    const response = await fetch(`${API_BASE}/content/${id}`, { method: "DELETE" });
+    if (!response.ok) throw new Error(`DELETE /content/${id} failed: ${response.status}`);
+  },
   repurposeContent: (productId: number, platforms: string[]) =>
     request<{ status: string }>("/content/repurpose", {
       method: "POST",

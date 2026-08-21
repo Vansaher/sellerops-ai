@@ -106,6 +106,15 @@ def repurpose_content(request: schemas.RepurposeRequest, background_tasks: Backg
     return {"status": "queued", "product_id": request.product_id, "platforms": request.platforms}
 
 
+@router.delete("/{asset_id}", status_code=204)
+def delete_content_asset(asset_id: int, db: Session = Depends(get_db)):
+    asset = db.get(models.ContentAsset, asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Content asset not found")
+    db.delete(asset)
+    db.commit()
+
+
 @router.patch("/{asset_id}", response_model=schemas.ContentAssetOut)
 def update_content_asset(asset_id: int, update: schemas.ContentAssetUpdate, db: Session = Depends(get_db)):
     asset = db.get(models.ContentAsset, asset_id)

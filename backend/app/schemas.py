@@ -60,6 +60,13 @@ class MessageDraftUpdate(BaseModel):
     status: str  # approved | sent
 
 
+class MessageSend(BaseModel):
+    platform: str
+    thread_id: str
+    customer_name: str | None = None
+    body: str = Field(min_length=1)
+
+
 class ContentAssetOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -119,6 +126,15 @@ class ProductUpdate(BaseModel):
     description: str | None = None
     price: float | None = None
     sku: str | None = None
+
+
+class ProductPhotoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    product_id: int
+    image_path: str
+    created_at: datetime
 
 
 class RestockRequest(BaseModel):

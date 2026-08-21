@@ -95,7 +95,7 @@ export const PLATFORM_META: Record<Platform, PlatformMeta> = {
     label: "Instagram",
     color: "linear-gradient(135deg, #833AB4, #E1306C, #F77737)",
     solidColor: "#E1306C",
-    tintBg: "",
+    tintBg: "rgba(225, 48, 108, 0.10)",
     isGradient: true,
     Icon: InstagramIcon,
   },
