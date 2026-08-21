@@ -44,6 +44,11 @@ npm run dev
 
 Dashboard at http://localhost:5173, calls the API at http://localhost:8000 (override with `VITE_API_BASE`).
 
-## Demo script
+## Business impact explanation
 
-New order comes in → chat comes in → AI drafts reply → you approve → order sits pending past the threshold and gets flagged (or use `POST /admin/simulate-delayed-order`) → AI drafts a resolution message → you send it → stock runs low (or use `POST /admin/simulate-low-stock`) → AI drafts a broadcast to followers → upload a product photo and generate Content Studio variants for all three platforms → check the Dashboard digest for a rollup of what still needs attention.
+Indonesian sellers running multiple platforms simultaneously lose hours daily to context-switching across separate apps just to answer chats, check orders, update stock, and write listing copy in different ways. SellerOps AI collapses that into one workspace with an AI layer that drafts the repetitive work and a human who approves anything that touches money, customer trust, or public content.
+
+AI-drafted replies cut chat response latency, which directly affects Shopee/TikTok Shop's own response-rate seller scoring. A risk tag (auto_safe vs needs_review) means routine questions (order status, stock checks) can auto-send safely, and anything ambiguous still waits for the seller's judgment. Synced inventory across platforms prevents the classic multi-channel overselling problem, and low-stock alerts turn automatically into ready-to-post restock announcements. Content Studio turns one product photo and description into three platform-correct listings based on the actual photo, cropped to each platform's ratio instead of the seller manually rewriting and reformatting for each. A daily AI digest replaces checking four separate pages with a few seconds of read of what actually needs attention.
+
+The result is fewer hours lost to manual cross-platform busywork, faster and more consistent customer response, fewer stockouts, and content that goes out three times faster, without removing the seller's control over anything that carries real risk.
+
