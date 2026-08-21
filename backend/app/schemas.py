@@ -67,6 +67,7 @@ class ContentAssetOut(BaseModel):
     platform: str
     type: str
     body: str
+    image_path: str | None = None
     status: str
     created_at: datetime
 
@@ -81,6 +82,11 @@ class ContentGenerateRequest(BaseModel):
     platforms: list[str] = ["shopee", "tiktok", "instagram"]
 
 
+class RepurposeRequest(BaseModel):
+    product_id: int
+    platforms: list[str] = ["shopee", "tiktok", "instagram"]
+
+
 class ProductOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -91,6 +97,7 @@ class ProductOut(BaseModel):
     sku: str
     stock_qty: int
     low_stock_reason: str | None = None
+    image_path: str | None = None
 
 
 class ProductCreate(BaseModel):

@@ -4,8 +4,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository layout
 
-This is not a git repository.
-
 ```
 sellerops-ai/
   backend/    FastAPI + SQLite
@@ -48,17 +46,26 @@ There is no frontend test suite.
 
 ### Backend
 
-FastAPI app (`app/main.py`) registering one router per module under `app/routers/`: `orders.py`, `inventory.py`, `inbox.py`, `content.py`, `products.py`, `webhooks.py`. SQLAlchemy models (`app/models.py`) map directly to the doc's data model: `sellers`, `products`, `inventory`, `orders`, `messages`, `content_assets`. `app/database.py` wires a SQLite engine (`DATABASE_URL` env var); `Base.metadata.create_all` runs at import time in `main.py`, so schema changes require deleting `sellerops.db` and re-running `app.seed` (no migration tooling).
+FastAPI app (`app/main.py`) registering one router per module under `app/routers/`: `orders.py`, `inventory.py`, `inbox.py`, `content.py`, `products.py`, `webhooks.py`, `broadcast.py`, `admin.py`. SQLAlchemy models (`app/models.py`) map directly to the doc's data model: `sellers`, `products`, `inventory`, `orders`, `messages`, `content_assets`. `app/database.py` wires a SQLite engine (`DATABASE_URL` env var); `Base.metadata.create_all` runs at import time in `main.py`, so schema changes require deleting `sellerops.db` and re-running `app.seed` (no migration tooling). `main.py` also mounts `uploads/` (product photos) as static files at `/uploads`.
+
+**`admin.py`**: demo-support endpoints, not seller-facing — `POST /admin/reset-db` (drop/recreate + reseed), `POST /admin/fill-inventory`, and `POST /admin/simulate-delayed-order` / `POST /admin/simulate-low-stock`, which backdate/underfill data on demand so the order-anomaly and low-stock-alert demos don't require waiting out real thresholds (`DELAY_THRESHOLD_HOURS`, `LOW_STOCK_THRESHOLD` in `models.py`).
+
+**Order anomaly detection** (`orders.py` + `app/services/inventory_sync.py`): orders past `DELAY_THRESHOLD_HOURS` while still `pending` get a `flag_reason`, surfaced via `GET /orders/anomalies`; `POST /orders/{id}/draft-resolution` calls `llm.draft_order_resolution` to draft a customer-facing message (plus an internal note) that gets approved/sent through the same draft→sent lifecycle as inbox messages, cross-linking Orders into the Inbox. `sync_product_inventory` mirrors `stock_qty` out to per-platform `Inventory` rows and each adapter's `push_inventory_update` — the real wiring behind what a low-stock trigger then broadcasts through `broadcast.py` (`POST /broadcast/generate` → `llm.draft_broadcast_message`, stored as a `ContentAsset` with `type="broadcast"`).
+
+**Product photo → per-platform repurposing** (`products.py` + `app/services/image_repurpose.py`): `POST /products/{id}/photo` uploads and stores a product photo (`uploads/products/{id}/original.jpg`, `Product.image_path`). `POST /content/repurpose` then, per platform, deterministically center-crops that photo to the platform's real aspect ratio (`crop_for_platform` — Shopee 1:1, TikTok 9:16, Instagram 4:5, no AI involved) and asks a vision-capable model (`llm.draft_repurposed_caption`, separate `LLM_VISION_MODEL`/`DEFAULT_VISION_MODEL`) to draft a caption grounded in the actual photo, saved as a `ContentAsset` with `type="repurpose"` and its own `image_path`.
 
 **No message broker.** This was a deliberate scoping decision (see the architecture doc §3): instead of Celery/RabbitMQ, async work (webhook ingestion, AI content generation) runs via FastAPI's in-process `BackgroundTasks`, opening its own `SessionLocal()` DB session per task (see `app/routers/webhooks.py::_ingest_task` and `app/routers/content.py::_generate_content_task` for the pattern).
 
 **Platform adapters** (`app/services/adapters/`): `base.py` defines the `PlatformAdapter` interface (`fetch_new_orders`, `fetch_new_messages`, `push_inventory_update`) that a real Shopee/TikTok/Instagram integration would implement. `shopee.py` is a working mock that returns randomized fixture data in the real API's shape; `tiktok.py` and `instagram.py` are stubs. `POST /webhooks/simulate/{platform}` drives this — it's how the demo simulates "a new order/chat comes in." Instagram has no order concept (not a marketplace), so its adapter's `fetch_new_orders` is intentionally always empty — see `docs/platform-api-capabilities.md` for what each real platform API actually supports and what's gated behind approval.
 
-**LLM layer** (`app/services/llm.py`): calls **Groq** (`openai/gpt-oss-120b` by default, via the `groq` Python SDK), not Anthropic/OpenAI — this is the actual configured provider (`LLM_API_KEY`/`LLM_MODEL` in `.env`), despite the architecture doc mentioning "Claude/Qwen" as an example. The provider is isolated to this one file. Two entry points:
+**LLM layer** (`app/services/llm.py`): calls **Groq** (`openai/gpt-oss-120b` by default, via the `groq` Python SDK), not Anthropic/OpenAI — this is the actual configured provider (`LLM_API_KEY`/`LLM_MODEL` in `.env`), despite the architecture doc mentioning "Claude/Qwen" as an example. A separate vision-capable model (`LLM_VISION_MODEL`/`DEFAULT_VISION_MODEL`, e.g. `qwen/qwen3.6-27b`) is used only for image-grounded captioning. The provider is isolated to this one file. Entry points:
 - `draft_reply(db, seller_id, customer_message)` — builds RAG context by directly querying that seller's `products` + `orders` (no embeddings, direct SQL query — sufficient at this data scale), then asks the LLM for a JSON response containing the drafted reply plus a `risk` tag (`auto_safe` vs `needs_review`). This risk tag is the mechanism behind the whole "AI drafts, human approves" design principle stated in the architecture doc.
 - `generate_content(product, platform)` — per-platform system prompt (Shopee SEO description, TikTok/Instagram caption+hashtags), returns JSON `{"body": "..."}`.
+- `draft_order_resolution(order)` — drafts a customer-facing resolution message plus an internal note for a flagged/anomalous order.
+- `draft_broadcast_message(product, platform, context)` — drafts a broadcast/announcement message (e.g. for a low-stock/reorder alert) for a given product+platform.
+- `draft_repurposed_caption(product, platform, image_path)` — sends the actual product photo (base64 data URL) to `vision_model` via `complete_json_with_image` and returns a caption grounded in what's visible in the photo.
 
-Both call sites wrap the LLM call in `try/except` and store a `[AI ... failed: ...]` string as the draft body on failure rather than raising, so a broken LLM call never drops a queued background job.
+All call sites wrap the LLM call in `try/except` and store a `[AI ... failed: ...]` string as the draft body on failure rather than raising, so a broken LLM call never drops a queued background job.
 
 The **risk tag flows through to auto-send**: `messages.risk` is a DB column, surfaced via `/inbox` and used by the frontend to decide whether to auto-approve a draft (see Frontend below).
 

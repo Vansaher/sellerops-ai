@@ -37,6 +37,7 @@ class Product(Base):
     price: Mapped[float] = mapped_column(Numeric(12, 2))
     sku: Mapped[str] = mapped_column(String(64))
     stock_qty: Mapped[int] = mapped_column(default=0)
+    image_path: Mapped[str | None] = mapped_column(String(255), default=None)
 
     seller: Mapped["Seller"] = relationship(back_populates="products")
     inventory: Mapped[list["Inventory"]] = relationship(back_populates="product")
@@ -115,8 +116,9 @@ class ContentAsset(Base):
     seller_id: Mapped[int] = mapped_column(ForeignKey("sellers.id"))
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
     platform: Mapped[str] = mapped_column(String(32))
-    type: Mapped[str] = mapped_column(String(32))  # description | caption | hashtags | broadcast
+    type: Mapped[str] = mapped_column(String(32))  # description | caption | hashtags | broadcast | repurpose
     body: Mapped[str] = mapped_column(String(4000))
+    image_path: Mapped[str | None] = mapped_column(String(255), default=None)  # set for type="repurpose" rows
     status: Mapped[str] = mapped_column(String(16), default="draft")  # draft | approved | published
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 

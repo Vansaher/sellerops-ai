@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 
@@ -7,6 +8,7 @@ from sqlalchemy.orm import Session
 from app import models
 
 DEFAULT_MODEL = "openai/gpt-oss-120b"
+DEFAULT_VISION_MODEL = "qwen/qwen3.6-27b"
 
 
 class LLMClient:
@@ -14,6 +16,7 @@ class LLMClient:
 
     def __init__(self) -> None:
         self.model = os.getenv("LLM_MODEL", DEFAULT_MODEL)
+        self.vision_model = os.getenv("LLM_VISION_MODEL", DEFAULT_VISION_MODEL)
         api_key = os.getenv("LLM_API_KEY")
         self._client = Groq(api_key=api_key) if api_key else None
 
@@ -26,6 +29,26 @@ class LLMClient:
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": prompt},
+            ],
+            response_format={"type": "json_object"},
+        )
+        return json.loads(response.choices[0].message.content)
+
+    def complete_json_with_image(self, system: str, prompt: str, image_data_url: str) -> dict:
+        if self._client is None:
+            raise RuntimeError("LLM_API_KEY not configured — set it in .env")
+
+        response = self._client.chat.completions.create(
+            model=self.vision_model,
+            messages=[
+                {"role": "system", "content": system},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": image_data_url}},
+                    ],
+                },
             ],
             response_format={"type": "json_object"},
         )
@@ -187,6 +210,44 @@ def draft_broadcast_message(product: models.Product, platform: str, context: str
         body = str(result.get("body", "")).strip()
         if not body:
             raise ValueError("empty broadcast from model")
+        return body
+    except Exception as exc:  # noqa: BLE001 — surface as a stored failure string, don't crash the request
+        return f"[AI draft failed: {exc}]"
+
+
+REPURPOSE_SYSTEM_PROMPTS = {
+    "shopee": (
+        "You are looking at a product photo for an Indonesian online seller. Write a short "
+        "Shopee listing caption in Indonesian (1-3 sentences) that references what's actually "
+        "visible in the photo — color, style, setting. Do not invent details not visible."
+    ),
+    "tiktok": (
+        "You are looking at a product photo for an Indonesian online seller. Write a short, "
+        "punchy TikTok Shop caption in Indonesian (1-2 sentences) that references what's "
+        "actually visible in the photo — color, style, setting. Do not invent details not visible."
+    ),
+    "instagram": (
+        "You are looking at a product photo for an Indonesian online seller. Write an engaging "
+        "Instagram caption in Indonesian with emojis (1-3 sentences) that references what's "
+        "actually visible in the photo — color, style, setting. Do not invent details not visible."
+    ),
+}
+
+
+def draft_repurposed_caption(product: models.Product, platform: str, image_path: str) -> str:
+    system = REPURPOSE_SYSTEM_PROMPTS.get(platform, REPURPOSE_SYSTEM_PROMPTS["shopee"])
+    prompt = (
+        f"Product: {product.name}\nPrice: Rp{product.price}\n\n"
+        'Respond only with JSON: {"body": "<the caption>"}.'
+    )
+    client = LLMClient()
+    try:
+        with open(image_path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode()
+        result = client.complete_json_with_image(system, prompt, f"data:image/jpeg;base64,{b64}")
+        body = str(result.get("body", "")).strip()
+        if not body:
+            raise ValueError("empty caption from model")
         return body
     except Exception as exc:  # noqa: BLE001 — surface as a stored failure string, don't crash the request
         return f"[AI draft failed: {exc}]"

@@ -50,6 +50,7 @@ export interface ContentAsset {
   platform: string;
   type: string;
   body: string;
+  image_path: string | null;
   status: string;
   created_at: string;
 }
@@ -62,7 +63,10 @@ export interface Product {
   sku: string;
   stock_qty: number;
   low_stock_reason: string | null;
+  image_path: string | null;
 }
+
+export const assetUrl = (path: string) => `${API_BASE}${path}`;
 
 export const api = {
   listOrders: () => request<Order[]>("/orders"),
@@ -78,6 +82,13 @@ export const api = {
     request<Product>("/products", { method: "POST", body: JSON.stringify(body) }),
   restockProduct: (productId: number, amount: number) =>
     request<Product>(`/inventory/${productId}/restock`, { method: "POST", body: JSON.stringify({ amount }) }),
+  uploadProductPhoto: async (productId: number, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch(`${API_BASE}/products/${productId}/photo`, { method: "POST", body: formData });
+    if (!response.ok) throw new Error(`POST /products/${productId}/photo failed: ${response.status}`);
+    return response.json() as Promise<Product>;
+  },
   listMessages: () => request<Message[]>("/inbox"),
   draftReply: (messageId: number) =>
     request<Message>(`/inbox/${messageId}/draft-reply`, { method: "POST" }),
@@ -92,6 +103,11 @@ export const api = {
     }),
   updateContentAsset: (id: number, body: { body?: string; status: string }) =>
     request<ContentAsset>(`/content/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  repurposeContent: (productId: number, platforms: string[]) =>
+    request<{ status: string }>("/content/repurpose", {
+      method: "POST",
+      body: JSON.stringify({ product_id: productId, platforms }),
+    }),
   simulateIncoming: (platform: string) =>
     request<{ status: string }>(`/webhooks/simulate/${platform}`, { method: "POST" }),
   resetDb: () => request<{ status: string }>("/admin/reset-db", { method: "POST" }),

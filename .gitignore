@@ -5,6 +5,7 @@ backend/**/__pycache__/
 *.pyc
 backend/.env
 backend/sellerops.db
+backend/uploads/
 
 # --- Frontend (Node) ---
 frontend/node_modules/
