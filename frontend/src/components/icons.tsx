@@ -49,6 +49,17 @@ export function InventoryIcon() {
   );
 }
 
+export function BroadcastIcon() {
+  return (
+    <svg {...common}>
+      <path d="M3 11v2a2 2 0 0 0 2 2h1l3 4v-6" />
+      <path d="M6 11l10-5v12L6 13" />
+      <path d="M18 9a3 3 0 0 1 0 6" />
+      <path d="M20.5 7a6.5 6.5 0 0 1 0 10" />
+    </svg>
+  );
+}
+
 export function ContentIcon() {
   return (
     <svg {...common}>

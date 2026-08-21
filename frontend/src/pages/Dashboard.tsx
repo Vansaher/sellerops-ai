@@ -1,23 +1,21 @@
 import { useEffect, useState } from "react";
-import { api, type ContentAsset, type InventoryItem, type Message, type Order } from "../lib/api";
-
-const LOW_STOCK_THRESHOLD = 5;
+import { api, type ContentAsset, type Message, type Order, type Product } from "../lib/api";
 
 export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [contentAssets, setContentAssets] = useState<ContentAsset[]>([]);
 
   useEffect(() => {
     api.listOrders().then(setOrders).catch(console.error);
-    api.listInventory().then(setInventory).catch(console.error);
+    api.listProducts().then(setProducts).catch(console.error);
     api.listMessages().then(setMessages).catch(console.error);
     api.listContentAssets().then(setContentAssets).catch(console.error);
   }, []);
 
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
-  const lowStock = inventory.filter((i) => i.stock_qty <= LOW_STOCK_THRESHOLD).length;
+  const lowStock = products.filter((p) => p.low_stock_reason).length;
   const draftsAwaitingReview = messages.filter((m) => m.sender === "ai_draft" && m.status === "draft").length;
   const contentAwaitingApproval = contentAssets.filter((c) => c.status === "draft").length;
 

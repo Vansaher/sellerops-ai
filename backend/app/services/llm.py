@@ -136,6 +136,62 @@ def draft_order_resolution(order: models.Order) -> tuple[str, str]:
         return failure, failure
 
 
+BROADCAST_SYSTEM_PROMPTS = {
+    "shopee": (
+        "Write a short Shopee broadcast/announcement message in Indonesian to notify "
+        "followers about this product. 1-3 sentences, friendly and direct."
+    ),
+    "tiktok": (
+        "Write a short, punchy TikTok Shop broadcast message in Indonesian to notify "
+        "followers about this product. 1-2 sentences, energetic tone."
+    ),
+    "instagram": (
+        "Write an Instagram broadcast-channel message in Indonesian to notify "
+        "followers about this product, with emojis. 1-3 sentences."
+    ),
+}
+
+OUT_OF_STOCK_BROADCAST_SYSTEM_PROMPTS = {
+    "shopee": (
+        "Write a short Shopee broadcast message in Indonesian telling followers this "
+        "product is currently out of stock. Apologetic but positive tone, invite them "
+        "to check back soon for restock. 1-2 sentences. Do not invite them to buy now."
+    ),
+    "tiktok": (
+        "Write a short TikTok Shop broadcast message in Indonesian telling followers "
+        "this product is currently out of stock. Apologetic but positive tone, invite "
+        "them to check back soon for restock. 1-2 sentences. Do not invite them to buy now."
+    ),
+    "instagram": (
+        "Write an Instagram broadcast-channel message in Indonesian, with emojis, "
+        "telling followers this product is currently out of stock. Apologetic but "
+        "positive tone, invite them to check back soon for restock. 1-2 sentences. "
+        "Do not invite them to buy now."
+    ),
+}
+
+
+def draft_broadcast_message(product: models.Product, platform: str, context: str | None = None) -> str:
+    prompts = OUT_OF_STOCK_BROADCAST_SYSTEM_PROMPTS if product.stock_qty <= 0 else BROADCAST_SYSTEM_PROMPTS
+    system = prompts.get(platform, prompts["shopee"])
+    context_line = f"\nContext: {context}" if context else ""
+    prompt = (
+        f"Product: {product.name}\n"
+        f"Price: Rp{product.price}\n"
+        f"Stock: {product.stock_qty}{context_line}\n\n"
+        'Respond only with JSON: {"body": "<the broadcast message>"}.'
+    )
+    client = LLMClient()
+    try:
+        result = client.complete_json(system, prompt)
+        body = str(result.get("body", "")).strip()
+        if not body:
+            raise ValueError("empty broadcast from model")
+        return body
+    except Exception as exc:  # noqa: BLE001 — surface as a stored failure string, don't crash the request
+        return f"[AI draft failed: {exc}]"
+
+
 def generate_content(product: models.Product, platform: str) -> str:
     system = CONTENT_SYSTEM_PROMPTS.get(platform, CONTENT_SYSTEM_PROMPTS["shopee"])
     prompt = (

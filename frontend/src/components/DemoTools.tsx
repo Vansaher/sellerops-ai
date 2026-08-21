@@ -30,6 +30,7 @@ export default function DemoTools({ onAction }: DemoToolsProps) {
   const [resetPending, setResetPending] = useState(false);
   const [filling, setFilling] = useState(false);
   const [simulatingDelay, setSimulatingDelay] = useState(false);
+  const [simulatingLowStock, setSimulatingLowStock] = useState(false);
 
   const toggleOpen = () => {
     setOpen((o) => !o);
@@ -70,6 +71,16 @@ export default function DemoTools({ onAction }: DemoToolsProps) {
       onAction();
     } finally {
       setSimulatingDelay(false);
+    }
+  };
+
+  const handleSimulateLowStock = async () => {
+    setSimulatingLowStock(true);
+    try {
+      await api.simulateLowStock();
+      onAction();
+    } finally {
+      setSimulatingLowStock(false);
     }
   };
 
@@ -135,6 +146,13 @@ export default function DemoTools({ onAction }: DemoToolsProps) {
             <span className="demo-tools-section-label">Order anomaly</span>
             <button type="button" className="btn" disabled={simulatingDelay} onClick={handleSimulateDelayedOrder}>
               {simulatingDelay ? "…" : "Simulate delayed order"}
+            </button>
+          </div>
+
+          <div className="demo-tools-section">
+            <span className="demo-tools-section-label">Low stock</span>
+            <button type="button" className="btn" disabled={simulatingLowStock} onClick={handleSimulateLowStock}>
+              {simulatingLowStock ? "…" : "Simulate low stock"}
             </button>
           </div>
         </div>

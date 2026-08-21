@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 load_dotenv()
 
 from app.database import Base, engine  # noqa: E402
-from app.routers import admin, content, inbox, inventory, orders, products, webhooks  # noqa: E402
+from app.routers import admin, broadcast, content, inbox, inventory, orders, products, webhooks  # noqa: E402
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,6 +24,7 @@ app.include_router(inbox.router)
 app.include_router(content.router)
 app.include_router(products.router)
 app.include_router(webhooks.router)
+app.include_router(broadcast.router)
 
 # Demo/admin tools — safe to remove this router (and backend/app/routers/admin.py) entirely for production
 app.include_router(admin.router)

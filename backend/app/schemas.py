@@ -68,6 +68,7 @@ class ContentAssetOut(BaseModel):
     type: str
     body: str
     status: str
+    created_at: datetime
 
 
 class ContentAssetUpdate(BaseModel):
@@ -89,6 +90,7 @@ class ProductOut(BaseModel):
     price: float
     sku: str
     stock_qty: int
+    low_stock_reason: str | None = None
 
 
 class ProductCreate(BaseModel):
@@ -101,3 +103,9 @@ class ProductCreate(BaseModel):
 
 class RestockRequest(BaseModel):
     amount: int = Field(gt=0)
+
+
+class BroadcastGenerateRequest(BaseModel):
+    product_id: int
+    platform: str  # shopee | tiktok | instagram
+    context: str | None = None  # optional trigger context, e.g. a low-stock reason

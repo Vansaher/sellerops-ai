@@ -85,7 +85,7 @@ export default function Orders({ onNavigateToInbox }: OrdersProps) {
                     <span className="pill">sent to customer</span>
                     <div className="btn-row">
                       <button type="button" className="btn" onClick={() => onNavigateToInbox(o.platform)}>
-                        View in Inbox
+                        View in Chat
                       </button>
                     </div>
                   </div>

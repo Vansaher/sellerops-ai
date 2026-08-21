@@ -6,8 +6,12 @@ export interface SidebarItem<T extends string> {
   icon: ReactNode;
 }
 
+export type SidebarEntry<T extends string> =
+  | ({ type: "item" } & SidebarItem<T>)
+  | { type: "group"; label: string; icon: ReactNode; items: { key: T; label: string }[] };
+
 interface SidebarProps<T extends string> {
-  items: SidebarItem<T>[];
+  items: SidebarEntry<T>[];
   active: T;
   onSelect: (key: T) => void;
 }
@@ -17,17 +21,38 @@ export default function Sidebar<T extends string>({ items, active, onSelect }: S
     <aside className="sidebar">
       <div className="sidebar-title">SellerOps AI</div>
       <nav className="sidebar-nav">
-        {items.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            className={`sidebar-link${item.key === active ? " active" : ""}`}
-            onClick={() => onSelect(item.key)}
-          >
-            {item.icon}
-            {item.label}
-          </button>
-        ))}
+        {items.map((entry) =>
+          entry.type === "group" ? (
+            <div key={entry.label}>
+              <div className="sidebar-group-label">
+                {entry.icon}
+                {entry.label}
+              </div>
+              <div className="sidebar-subnav">
+                {entry.items.map((sub) => (
+                  <button
+                    key={sub.key}
+                    type="button"
+                    className={`sidebar-link sidebar-sublink${sub.key === active ? " active" : ""}`}
+                    onClick={() => onSelect(sub.key)}
+                  >
+                    {sub.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <button
+              key={entry.key}
+              type="button"
+              className={`sidebar-link${entry.key === active ? " active" : ""}`}
+              onClick={() => onSelect(entry.key)}
+            >
+              {entry.icon}
+              {entry.label}
+            </button>
+          )
+        )}
       </nav>
     </aside>
   );

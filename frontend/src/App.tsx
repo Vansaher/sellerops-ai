@@ -1,7 +1,8 @@
 import { useState } from "react";
 import DemoTools from "./components/DemoTools";
-import Sidebar, { type SidebarItem } from "./components/Sidebar";
+import Sidebar, { type SidebarEntry } from "./components/Sidebar";
 import { ContentIcon, DashboardIcon, InboxIcon, InventoryIcon, OrdersIcon } from "./components/icons";
+import Broadcast from "./pages/Broadcast";
 import Content from "./pages/Content";
 import Dashboard from "./pages/Dashboard";
 import Inbox, { type Platform } from "./pages/Inbox";
@@ -9,14 +10,22 @@ import Inventory from "./pages/Inventory";
 import Orders from "./pages/Orders";
 import "./App.css";
 
-type TabKey = "dashboard" | "inbox" | "orders" | "inventory" | "content";
+type TabKey = "dashboard" | "chat" | "broadcast" | "orders" | "inventory" | "content";
 
-const NAV_ITEMS: SidebarItem<TabKey>[] = [
-  { key: "dashboard", label: "Dashboard", icon: <DashboardIcon /> },
-  { key: "inbox", label: "Inbox", icon: <InboxIcon /> },
-  { key: "orders", label: "Orders", icon: <OrdersIcon /> },
-  { key: "inventory", label: "Inventory", icon: <InventoryIcon /> },
-  { key: "content", label: "Content Studio", icon: <ContentIcon /> },
+const NAV_ITEMS: SidebarEntry<TabKey>[] = [
+  { type: "item", key: "dashboard", label: "Dashboard", icon: <DashboardIcon /> },
+  {
+    type: "group",
+    label: "Messaging",
+    icon: <InboxIcon />,
+    items: [
+      { key: "chat", label: "Chat" },
+      { key: "broadcast", label: "Broadcast" },
+    ],
+  },
+  { type: "item", key: "orders", label: "Orders", icon: <OrdersIcon /> },
+  { type: "item", key: "inventory", label: "Inventory", icon: <InventoryIcon /> },
+  { type: "item", key: "content", label: "Content Studio", icon: <ContentIcon /> },
 ];
 
 const AUTO_REPLY_STORAGE_KEY = "sellerops.autoReplyEnabled";
@@ -27,13 +36,19 @@ function App() {
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(
     () => localStorage.getItem(AUTO_REPLY_STORAGE_KEY) === "true"
   );
-  const [inboxPlatformHint, setInboxPlatformHint] = useState<Platform | null>(null);
+  const [chatPlatformHint, setChatPlatformHint] = useState<Platform | null>(null);
+  const [broadcastHint, setBroadcastHint] = useState<{ productId: number; context?: string } | null>(null);
 
   const bumpRefresh = () => setRefreshKey((k) => k + 1);
 
-  const handleNavigateToInbox = (platform: string) => {
-    setInboxPlatformHint(platform as Platform);
-    setActive("inbox");
+  const handleNavigateToChat = (platform: string) => {
+    setChatPlatformHint(platform as Platform);
+    setActive("chat");
+  };
+
+  const handleNavigateToBroadcast = (productId: number, context?: string) => {
+    setBroadcastHint({ productId, context });
+    setActive("broadcast");
   };
 
   const handleToggleAutoReply = (enabled: boolean) => {
@@ -45,20 +60,29 @@ function App() {
     switch (active) {
       case "dashboard":
         return <Dashboard key={refreshKey} />;
-      case "inbox":
+      case "chat":
         return (
           <Inbox
             key={refreshKey}
             autoReplyEnabled={autoReplyEnabled}
             onToggleAutoReply={handleToggleAutoReply}
-            initialPlatform={inboxPlatformHint}
-            onConsumedInitialPlatform={() => setInboxPlatformHint(null)}
+            initialPlatform={chatPlatformHint}
+            onConsumedInitialPlatform={() => setChatPlatformHint(null)}
+          />
+        );
+      case "broadcast":
+        return (
+          <Broadcast
+            key={refreshKey}
+            initialProductId={broadcastHint?.productId}
+            initialContext={broadcastHint?.context}
+            onConsumedInitialHint={() => setBroadcastHint(null)}
           />
         );
       case "orders":
-        return <Orders key={refreshKey} onNavigateToInbox={handleNavigateToInbox} />;
+        return <Orders key={refreshKey} onNavigateToInbox={handleNavigateToChat} />;
       case "inventory":
-        return <Inventory key={refreshKey} />;
+        return <Inventory key={refreshKey} onNavigateToBroadcast={handleNavigateToBroadcast} />;
       case "content":
         return <Content key={refreshKey} />;
     }

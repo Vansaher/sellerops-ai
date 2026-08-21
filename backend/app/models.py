@@ -24,6 +24,9 @@ class Seller(Base):
     content_assets: Mapped[list["ContentAsset"]] = relationship(back_populates="seller")
 
 
+LOW_STOCK_THRESHOLD = 5
+
+
 class Product(Base):
     __tablename__ = "products"
 
@@ -37,6 +40,12 @@ class Product(Base):
 
     seller: Mapped["Seller"] = relationship(back_populates="products")
     inventory: Mapped[list["Inventory"]] = relationship(back_populates="product")
+
+    @property
+    def low_stock_reason(self) -> str | None:
+        if self.stock_qty <= LOW_STOCK_THRESHOLD:
+            return f"Only {self.stock_qty} left — at or below the {LOW_STOCK_THRESHOLD}-unit reorder threshold."
+        return None
 
 
 class Inventory(Base):
@@ -106,8 +115,9 @@ class ContentAsset(Base):
     seller_id: Mapped[int] = mapped_column(ForeignKey("sellers.id"))
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
     platform: Mapped[str] = mapped_column(String(32))
-    type: Mapped[str] = mapped_column(String(32))  # description | caption | hashtags
+    type: Mapped[str] = mapped_column(String(32))  # description | caption | hashtags | broadcast
     body: Mapped[str] = mapped_column(String(4000))
     status: Mapped[str] = mapped_column(String(16), default="draft")  # draft | approved | published
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     seller: Mapped["Seller"] = relationship(back_populates="content_assets")

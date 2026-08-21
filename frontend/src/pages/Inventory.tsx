@@ -3,7 +3,11 @@ import { api, type InventoryItem, type Product } from "../lib/api";
 
 const emptyForm = { name: "", description: "", price: "", sku: "", stockQty: "" };
 
-export default function Inventory() {
+interface InventoryProps {
+  onNavigateToBroadcast: (productId: number, context?: string) => void;
+}
+
+export default function Inventory({ onNavigateToBroadcast }: InventoryProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [view, setView] = useState<"list" | "add">("list");
@@ -178,6 +182,20 @@ export default function Inventory() {
                   <span className="inventory-ig-note">Not tracked — manage stock directly in Instagram.</span>
                 </td>
                 <td>
+                  {product.low_stock_reason && (
+                    <div>
+                      <span className="pill pill-warning">{product.low_stock_reason}</span>
+                      <div className="btn-row">
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={() => onNavigateToBroadcast(product.id, product.low_stock_reason ?? undefined)}
+                        >
+                          Draft broadcast
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   {restockingId === product.id ? (
                     <div className="confirm-row">
                       <input

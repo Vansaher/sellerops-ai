@@ -51,6 +51,7 @@ export interface ContentAsset {
   type: string;
   body: string;
   status: string;
+  created_at: string;
 }
 
 export interface Product {
@@ -60,6 +61,7 @@ export interface Product {
   price: number;
   sku: string;
   stock_qty: number;
+  low_stock_reason: string | null;
 }
 
 export const api = {
@@ -97,4 +99,10 @@ export const api = {
     request<{ status: string; updated: number }>("/admin/fill-inventory", { method: "POST" }),
   simulateDelayedOrder: () =>
     request<Order>("/admin/simulate-delayed-order", { method: "POST" }),
+  simulateLowStock: () => request<Product>("/admin/simulate-low-stock", { method: "POST" }),
+  generateBroadcast: (productId: number, platform: string, context?: string) =>
+    request<ContentAsset>("/broadcast/generate", {
+      method: "POST",
+      body: JSON.stringify({ product_id: productId, platform, context }),
+    }),
 };
