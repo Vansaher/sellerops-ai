@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -9,17 +10,22 @@ load_dotenv()
 
 from app.database import Base, engine  # noqa: E402
 from app.routers import admin, broadcast, content, dashboard, inbox, inventory, orders, products, webhooks  # noqa: E402
+from app.seed import seed  # noqa: E402
 
 Base.metadata.create_all(bind=engine)
+seed()  # no-op if a seller already exists — safe to call on every boot
 
 UPLOADS_DIR = Path("uploads")
 UPLOADS_DIR.mkdir(exist_ok=True)
 
 app = FastAPI(title="SellerOps AI")
 
+# FRONTEND_ORIGINS: comma-separated list of allowed origins (e.g. a Netlify
+# URL in production). Always includes the local Vite dev server.
+_extra_origins = [o.strip() for o in os.getenv("FRONTEND_ORIGINS", "").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", *_extra_origins],
     allow_methods=["*"],
     allow_headers=["*"],
 )
