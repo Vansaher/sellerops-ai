@@ -1,0 +1,116 @@
+/* Floating demo/admin tools widget — self-contained, safe to delete this
+   file + DemoTools.tsx + their App.tsx hookup for production. The box
+   shadows here are a deliberate exception to the app's flat design system:
+   this is a fixed overlay that needs to visually separate from arbitrary
+   page content beneath it. */
+
+.demo-tools-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+  transition: background 0.15s ease;
+}
+
+.demo-tools-fab:hover {
+  background: var(--accent-hover);
+}
+
+.demo-tools-panel {
+  position: fixed;
+  bottom: 88px;
+  right: 24px;
+  z-index: 999;
+  width: 270px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.14);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.demo-tools-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.demo-tools-close {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+}
+
+.demo-tools-close:hover {
+  color: var(--text);
+}
+
+.demo-tools-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.demo-tools-section:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.demo-tools-section-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.demo-tools-btn-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.demo-tools-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.demo-tools-confirm-yes {
+  border: 1px solid #c0392b;
+  background: #c0392b;
+  color: #fff;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.demo-tools-confirm-yes:hover {
+  background: #a93226;
+  border-color: #a93226;
+}

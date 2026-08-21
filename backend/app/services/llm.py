@@ -95,6 +95,47 @@ CONTENT_JSON_INSTRUCTION = (
 )
 
 
+RESOLUTION_SYSTEM_PROMPT = (
+    "You are a seller operations assistant for an Indonesian online seller. An order "
+    "has been flagged as delayed. Produce two distinct pieces of text:\n"
+    "1. internal_note — a short internal note (under 3 sentences, in Indonesian) for "
+    "the seller's own eyes only, describing the likely cause and the recommended next "
+    "action (e.g. contact the courier, check stock). This is NEVER sent to the customer.\n"
+    "2. customer_message — a short, apologetic message (1-2 sentences, in Indonesian, "
+    "written in the first person as the seller speaking directly to the customer) "
+    "about the delay — e.g. apologizing for the wait and explaining that shipment "
+    "confirmation hasn't come through yet. Do not include any internal reasoning, "
+    "next-step instructions, or seller-facing language in this message — it is sent "
+    "verbatim to the customer.\n"
+    'Respond only with JSON: {"internal_note": "<...>", "customer_message": "<...>"}.'
+)
+
+
+def draft_order_resolution(order: models.Order) -> tuple[str, str]:
+    """Returns (internal_note, customer_message). internal_note is seller-facing
+    only and should never be sent to a customer; customer_message is the text
+    meant to actually be sent.
+    """
+    prompt = (
+        f"Order {order.platform_order_id} on {order.platform}\n"
+        f"Status: {order.status}\n"
+        f"Created: {order.created_at.isoformat()}\n"
+        f"Amount: Rp{order.amount}\n"
+        f"Flag reason: {order.flag_reason}\n"
+    )
+    client = LLMClient()
+    try:
+        result = client.complete_json(RESOLUTION_SYSTEM_PROMPT, prompt)
+        internal_note = str(result.get("internal_note", "")).strip()
+        customer_message = str(result.get("customer_message", "")).strip()
+        if not customer_message:
+            raise ValueError("empty customer_message from model")
+        return internal_note, customer_message
+    except Exception as exc:  # noqa: BLE001 — surface as a stored failure string, don't crash the request
+        failure = f"[AI draft failed: {exc}]"
+        return failure, failure
+
+
 def generate_content(product: models.Product, platform: str) -> str:
     system = CONTENT_SYSTEM_PROMPTS.get(platform, CONTENT_SYSTEM_PROMPTS["shopee"])
     prompt = (

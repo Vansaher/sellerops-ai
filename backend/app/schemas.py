@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class OrderOut(BaseModel):
@@ -13,6 +13,21 @@ class OrderOut(BaseModel):
     customer_ref: str
     amount: float
     created_at: datetime
+    flag_reason: str | None = None
+    resolution_draft: str | None = None
+    resolution_status: str | None = None
+
+
+class OrderResolutionDraft(OrderOut):
+    internal_note: str | None = None  # seller-facing only, never persisted, never sent to the customer
+
+
+class OrderResolutionUpdate(BaseModel):
+    status: str  # dismissed
+
+
+class OrderMessageSend(BaseModel):
+    body: str = Field(min_length=1)
 
 
 class InventoryOut(BaseModel):
@@ -31,6 +46,7 @@ class MessageOut(BaseModel):
     id: int
     platform: str
     thread_id: str
+    customer_name: str | None = None
     sender: str
     body: str
     status: str
@@ -72,3 +88,16 @@ class ProductOut(BaseModel):
     description: str
     price: float
     sku: str
+    stock_qty: int
+
+
+class ProductCreate(BaseModel):
+    name: str
+    description: str = ""
+    price: float
+    sku: str
+    stock_qty: int = 0
+
+
+class RestockRequest(BaseModel):
+    amount: int = Field(gt=0)

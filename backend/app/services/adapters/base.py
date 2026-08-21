@@ -11,6 +11,7 @@ class OrderPayload(TypedDict):
 
 class MessagePayload(TypedDict):
     thread_id: str
+    customer_name: str
     sender: str
     body: str
 

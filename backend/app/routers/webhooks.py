@@ -37,6 +37,7 @@ def _ingest_task(platform: str, seller_id: int) -> None:
                     seller_id=seller_id,
                     platform=platform,
                     thread_id=incoming.thread_id,
+                    customer_name=incoming.customer_name,
                     sender="ai_draft",
                     body=body,
                     status="draft",

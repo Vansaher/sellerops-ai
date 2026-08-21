@@ -19,6 +19,9 @@ export interface Order {
   customer_ref: string;
   amount: number;
   created_at: string;
+  flag_reason: string | null;
+  resolution_draft: string | null;
+  resolution_status: string | null;
 }
 
 export interface InventoryItem {
@@ -33,6 +36,7 @@ export interface Message {
   id: number;
   platform: string;
   thread_id: string;
+  customer_name: string | null;
   sender: string;
   body: string;
   status: string;
@@ -55,12 +59,23 @@ export interface Product {
   description: string;
   price: number;
   sku: string;
+  stock_qty: number;
 }
 
 export const api = {
   listOrders: () => request<Order[]>("/orders"),
+  draftResolution: (orderId: number) =>
+    request<Order & { internal_note: string | null }>(`/orders/${orderId}/draft-resolution`, { method: "POST" }),
+  updateOrderResolution: (orderId: number, status: string) =>
+    request<Order>(`/orders/${orderId}/resolution`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  sendOrderMessage: (orderId: number, body: string) =>
+    request<Order>(`/orders/${orderId}/send-message`, { method: "POST", body: JSON.stringify({ body }) }),
   listInventory: () => request<InventoryItem[]>("/inventory"),
   listProducts: () => request<Product[]>("/products"),
+  createProduct: (body: { name: string; description: string; price: number; sku: string; stock_qty: number }) =>
+    request<Product>("/products", { method: "POST", body: JSON.stringify(body) }),
+  restockProduct: (productId: number, amount: number) =>
+    request<Product>(`/inventory/${productId}/restock`, { method: "POST", body: JSON.stringify({ amount }) }),
   listMessages: () => request<Message[]>("/inbox"),
   draftReply: (messageId: number) =>
     request<Message>(`/inbox/${messageId}/draft-reply`, { method: "POST" }),
@@ -77,4 +92,9 @@ export const api = {
     request<ContentAsset>(`/content/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   simulateIncoming: (platform: string) =>
     request<{ status: string }>(`/webhooks/simulate/${platform}`, { method: "POST" }),
+  resetDb: () => request<{ status: string }>("/admin/reset-db", { method: "POST" }),
+  fillInventory: () =>
+    request<{ status: string; updated: number }>("/admin/fill-inventory", { method: "POST" }),
+  simulateDelayedOrder: () =>
+    request<Order>("/admin/simulate-delayed-order", { method: "POST" }),
 };

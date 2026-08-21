@@ -1,19 +1,13 @@
 import { useEffect, useState } from "react";
 import { api, type ContentAsset, type InventoryItem, type Message, type Order } from "../lib/api";
 
-const SIMULATE_PLATFORMS = ["shopee", "tiktok", "instagram"];
 const LOW_STOCK_THRESHOLD = 5;
 
-interface DashboardProps {
-  onSimulated: () => void;
-}
-
-export default function Dashboard({ onSimulated }: DashboardProps) {
+export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [contentAssets, setContentAssets] = useState<ContentAsset[]>([]);
-  const [simulating, setSimulating] = useState<string | null>(null);
 
   useEffect(() => {
     api.listOrders().then(setOrders).catch(console.error);
@@ -29,17 +23,6 @@ export default function Dashboard({ onSimulated }: DashboardProps) {
 
   const recentOrders = [...orders].sort((a, b) => b.id - a.id).slice(0, 3);
   const recentMessages = [...messages].sort((a, b) => b.id - a.id).slice(0, 3);
-
-  const handleSimulate = async (platform: string) => {
-    setSimulating(platform);
-    try {
-      await api.simulateIncoming(platform);
-      await new Promise((resolve) => setTimeout(resolve, 4000)); // give the background task + AI draft time to finish
-      onSimulated();
-    } finally {
-      setSimulating(null);
-    }
-  };
 
   return (
     <section>
@@ -65,21 +48,6 @@ export default function Dashboard({ onSimulated }: DashboardProps) {
           <div className="stat-value">{contentAwaitingApproval}</div>
           <div className="stat-label">Content awaiting approval</div>
         </div>
-      </div>
-
-      <div className="simulate-row">
-        <span>Simulate incoming (demo):</span>
-        {SIMULATE_PLATFORMS.map((platform) => (
-          <button
-            key={platform}
-            type="button"
-            className="btn"
-            disabled={simulating !== null}
-            onClick={() => handleSimulate(platform)}
-          >
-            {simulating === platform ? "…" : platform}
-          </button>
-        ))}
       </div>
 
       <h2>Recent orders</h2>
