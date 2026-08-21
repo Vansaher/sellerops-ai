@@ -13,6 +13,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export interface Order {
   id: number;
+  product_id: number | null;
   platform: string;
   platform_order_id: string;
   status: string;
@@ -80,6 +81,8 @@ export const api = {
   listProducts: () => request<Product[]>("/products"),
   createProduct: (body: { name: string; description: string; price: number; sku: string; stock_qty: number }) =>
     request<Product>("/products", { method: "POST", body: JSON.stringify(body) }),
+  updateProduct: (productId: number, body: { name?: string; description?: string; price?: number; sku?: string }) =>
+    request<Product>(`/products/${productId}`, { method: "PATCH", body: JSON.stringify(body) }),
   restockProduct: (productId: number, amount: number) =>
     request<Product>(`/inventory/${productId}/restock`, { method: "POST", body: JSON.stringify({ amount }) }),
   uploadProductPhoto: async (productId: number, file: File) => {
@@ -108,6 +111,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ product_id: productId, platforms }),
     }),
+  getDashboardDigest: () =>
+    request<{ digest: string; generated_at: string }>("/dashboard/digest", { method: "POST" }),
   simulateIncoming: (platform: string) =>
     request<{ status: string }>(`/webhooks/simulate/${platform}`, { method: "POST" }),
   resetDb: () => request<{ status: string }>("/admin/reset-db", { method: "POST" }),

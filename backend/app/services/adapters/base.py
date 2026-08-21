@@ -7,6 +7,7 @@ class OrderPayload(TypedDict):
     status: str
     customer_ref: str
     amount: float
+    sku: str  # item SKU from the platform's own order payload — resolved to a Product by the caller
 
 
 class MessagePayload(TypedDict):

@@ -253,6 +253,47 @@ def draft_repurposed_caption(product: models.Product, platform: str, image_path:
         return f"[AI draft failed: {exc}]"
 
 
+DIGEST_SYSTEM_PROMPT = (
+    "You are a seller operations assistant for an Indonesian online seller. You are given "
+    "three lists of already-flagged signals: delayed orders, low-stock products, and customer "
+    "messages awaiting human review. Write a short digest in Indonesian (3-5 short bullet "
+    "points, no preamble) summarizing what needs attention today. Do not invent anything not "
+    "in the provided lists. If a list is empty, don't mention it.\n"
+    'Respond only with JSON: {"digest": "<the digest text, bullets separated by newlines>"}.'
+)
+
+
+def draft_dashboard_digest(
+    flagged_orders: list[models.Order],
+    low_stock_products: list[models.Product],
+    needs_review_messages: list[models.Message],
+    product_names: dict[int, str] | None = None,
+) -> str:
+    if not flagged_orders and not low_stock_products and not needs_review_messages:
+        return "Semua lancar — tidak ada yang perlu perhatian khusus saat ini."
+
+    product_names = product_names or {}
+    lines = []
+    for o in flagged_orders:
+        product = product_names.get(o.product_id, "produk tidak diketahui") if o.product_id else "produk tidak diketahui"
+        lines.append(f"- Order {o.platform_order_id} ({o.platform}, {product}): {o.flag_reason}")
+    for p in low_stock_products:
+        lines.append(f"- Product {p.name} (SKU {p.sku}): {p.low_stock_reason}")
+    for m in needs_review_messages:
+        lines.append(f'- Message from {m.customer_name or "customer"} on {m.platform}: "{m.body}"')
+    prompt = "\n".join(lines)
+
+    client = LLMClient()
+    try:
+        result = client.complete_json(DIGEST_SYSTEM_PROMPT, prompt)
+        digest = str(result.get("digest", "")).strip()
+        if not digest:
+            raise ValueError("empty digest from model")
+        return digest
+    except Exception as exc:  # noqa: BLE001 — surface as a stored failure string, don't crash the request
+        return f"[AI digest failed: {exc}]"
+
+
 def generate_content(product: models.Product, platform: str) -> str:
     system = CONTENT_SYSTEM_PROMPTS.get(platform, CONTENT_SYSTEM_PROMPTS["shopee"])
     prompt = (

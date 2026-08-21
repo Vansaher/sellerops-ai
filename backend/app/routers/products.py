@@ -27,6 +27,20 @@ def create_product(body: schemas.ProductCreate, seller_id: int = 1, db: Session 
     return product
 
 
+@router.patch("/{product_id}", response_model=schemas.ProductOut)
+def update_product(product_id: int, body: schemas.ProductUpdate, db: Session = Depends(get_db)):
+    product = db.get(models.Product, product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(product, field, value)
+
+    db.commit()
+    db.refresh(product)
+    return product
+
+
 @router.post("/{product_id}/photo", response_model=schemas.ProductOut)
 async def upload_photo(product_id: int, file: UploadFile, db: Session = Depends(get_db)):
     product = db.get(models.Product, product_id)

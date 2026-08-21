@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, type Order } from "../lib/api";
+import { api, type Order, type Product } from "../lib/api";
 
 interface OrdersProps {
   onNavigateToInbox: (platform: string) => void;
@@ -7,6 +7,7 @@ interface OrdersProps {
 
 export default function Orders({ onNavigateToInbox }: OrdersProps) {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [internalNotes, setInternalNotes] = useState<Record<number, string | null>>({});
   const [busy, setBusy] = useState<number | null>(null);
@@ -15,7 +16,11 @@ export default function Orders({ onNavigateToInbox }: OrdersProps) {
 
   useEffect(() => {
     load();
+    api.listProducts().then(setProducts).catch(console.error);
   }, []);
+
+  const productName = (productId: number | null) =>
+    productId === null ? "—" : products.find((p) => p.id === productId)?.name ?? "—";
 
   const handleDraftResolution = async (orderId: number) => {
     setBusy(orderId);
@@ -65,6 +70,7 @@ export default function Orders({ onNavigateToInbox }: OrdersProps) {
           <tr>
             <th>Platform</th>
             <th>Order ID</th>
+            <th>Product</th>
             <th>Status</th>
             <th>Amount</th>
             <th>Flag</th>
@@ -75,6 +81,7 @@ export default function Orders({ onNavigateToInbox }: OrdersProps) {
             <tr key={o.id}>
               <td>{o.platform}</td>
               <td>{o.platform_order_id}</td>
+              <td>{productName(o.product_id)}</td>
               <td>
                 <span className="pill">{o.status}</span>
               </td>

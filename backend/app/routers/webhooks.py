@@ -24,7 +24,22 @@ def _ingest_task(platform: str, seller_id: int) -> None:
     db = SessionLocal()
     try:
         for order in adapter.fetch_new_orders():
-            db.add(models.Order(seller_id=seller_id, platform=platform, **order))
+            sku = order.pop("sku", None)
+            product = (
+                db.query(models.Product)
+                .filter(models.Product.seller_id == seller_id, models.Product.sku == sku)
+                .first()
+                if sku
+                else None
+            )
+            db.add(
+                models.Order(
+                    seller_id=seller_id,
+                    platform=platform,
+                    product_id=product.id if product else None,
+                    **order,
+                )
+            )
 
         for message in adapter.fetch_new_messages():
             incoming = models.Message(seller_id=seller_id, platform=platform, **message)

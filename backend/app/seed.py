@@ -39,6 +39,30 @@ def _populate(db: Session) -> models.Seller:
             sku="FLR-SUN-01",
             stock_qty=12,
         ),
+        models.Product(
+            seller_id=seller.id,
+            name="Karangan Bunga Papan Ucapan",
+            description="Karangan bunga papan untuk ucapan selamat, duka cita, atau pembukaan usaha.",
+            price=450000,
+            sku="FLR-BOARD-01",
+            stock_qty=8,
+        ),
+        models.Product(
+            seller_id=seller.id,
+            name="Buket Anggrek Bulan",
+            description="Buket anggrek bulan elegan, cocok untuk hadiah spesial atau acara resmi.",
+            price=225000,
+            sku="FLR-ORCHID-01",
+            stock_qty=10,
+        ),
+        models.Product(
+            seller_id=seller.id,
+            name="Bunga Tabur Duka Cita",
+            description="Rangkaian bunga tabur untuk acara belasungkawa.",
+            price=95000,
+            sku="FLR-CONDOL-01",
+            stock_qty=15,
+        ),
     ]
     db.add_all(products)
     db.flush()
@@ -46,16 +70,17 @@ def _populate(db: Session) -> models.Seller:
     for product in products:
         sync_product_inventory(db, product)
 
-    db.add(
-        models.Order(
-            seller_id=seller.id,
-            platform="shopee",
-            platform_order_id="SHP-100234",
-            status="pending",
-            customer_ref="cust_1001",
-            amount=150000,
-        )
-    )
+    rose, sun, board, orchid, condol = products
+    orders = [
+        dict(platform="shopee", product=rose, platform_order_id="SHP-100234", status="pending", customer_ref="cust_1001", amount=150000),
+        dict(platform="shopee", product=sun, platform_order_id="SHP-100567", status="completed", customer_ref="cust_1002", amount=120000),
+        dict(platform="tiktok", product=board, platform_order_id="TT-200145", status="pending", customer_ref="cust_2001", amount=450000),
+        dict(platform="tiktok", product=orchid, platform_order_id="TT-200389", status="completed", customer_ref="cust_2002", amount=225000),
+        dict(platform="shopee", product=condol, platform_order_id="SHP-100812", status="completed", customer_ref="cust_1003", amount=95000),
+    ]
+    for order in orders:
+        product = order.pop("product")
+        db.add(models.Order(seller_id=seller.id, product_id=product.id, **order))
     messages = [
         # Shopee — Siti Amalia (2 messages)
         dict(

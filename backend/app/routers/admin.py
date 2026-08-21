@@ -41,8 +41,11 @@ def simulate_delayed_order(seller_id: int = 1, db: Session = Depends(get_db)) ->
     """Creates a still-pending order backdated past the anomaly-detection
     threshold, so it shows up flagged immediately — lets the order anomaly
     detection demo be triggered on demand instead of waiting 48h for real."""
+    products = db.query(models.Product).filter(models.Product.seller_id == seller_id).all()
+    product = random.choice(products) if products else None
     order = models.Order(
         seller_id=seller_id,
+        product_id=product.id if product else None,
         platform=random.choice(["shopee", "tiktok"]),  # Instagram has no order concept
         platform_order_id=f"DEMO-{random.randint(100000, 999999)}",
         status="pending",

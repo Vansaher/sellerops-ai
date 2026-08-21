@@ -46,13 +46,15 @@ There is no frontend test suite.
 
 ### Backend
 
-FastAPI app (`app/main.py`) registering one router per module under `app/routers/`: `orders.py`, `inventory.py`, `inbox.py`, `content.py`, `products.py`, `webhooks.py`, `broadcast.py`, `admin.py`. SQLAlchemy models (`app/models.py`) map directly to the doc's data model: `sellers`, `products`, `inventory`, `orders`, `messages`, `content_assets`. `app/database.py` wires a SQLite engine (`DATABASE_URL` env var); `Base.metadata.create_all` runs at import time in `main.py`, so schema changes require deleting `sellerops.db` and re-running `app.seed` (no migration tooling). `main.py` also mounts `uploads/` (product photos) as static files at `/uploads`.
+FastAPI app (`app/main.py`) registering one router per module under `app/routers/`: `orders.py`, `inventory.py`, `inbox.py`, `content.py`, `products.py`, `webhooks.py`, `broadcast.py`, `dashboard.py`, `admin.py`. SQLAlchemy models (`app/models.py`) map directly to the doc's data model: `sellers`, `products`, `inventory`, `orders`, `messages`, `content_assets`. `app/database.py` wires a SQLite engine (`DATABASE_URL` env var); `Base.metadata.create_all` runs at import time in `main.py`, so schema changes require deleting `sellerops.db` and re-running `app.seed` (no migration tooling). `main.py` also mounts `uploads/` (product photos) as static files at `/uploads`.
 
 **`admin.py`**: demo-support endpoints, not seller-facing — `POST /admin/reset-db` (drop/recreate + reseed), `POST /admin/fill-inventory`, and `POST /admin/simulate-delayed-order` / `POST /admin/simulate-low-stock`, which backdate/underfill data on demand so the order-anomaly and low-stock-alert demos don't require waiting out real thresholds (`DELAY_THRESHOLD_HOURS`, `LOW_STOCK_THRESHOLD` in `models.py`).
 
 **Order anomaly detection** (`orders.py` + `app/services/inventory_sync.py`): orders past `DELAY_THRESHOLD_HOURS` while still `pending` get a `flag_reason`, surfaced via `GET /orders/anomalies`; `POST /orders/{id}/draft-resolution` calls `llm.draft_order_resolution` to draft a customer-facing message (plus an internal note) that gets approved/sent through the same draft→sent lifecycle as inbox messages, cross-linking Orders into the Inbox. `sync_product_inventory` mirrors `stock_qty` out to per-platform `Inventory` rows and each adapter's `push_inventory_update` — the real wiring behind what a low-stock trigger then broadcasts through `broadcast.py` (`POST /broadcast/generate` → `llm.draft_broadcast_message`, stored as a `ContentAsset` with `type="broadcast"`).
 
 **Product photo → per-platform repurposing** (`products.py` + `app/services/image_repurpose.py`): `POST /products/{id}/photo` uploads and stores a product photo (`uploads/products/{id}/original.jpg`, `Product.image_path`). `POST /content/repurpose` then, per platform, deterministically center-crops that photo to the platform's real aspect ratio (`crop_for_platform` — Shopee 1:1, TikTok 9:16, Instagram 4:5, no AI involved) and asks a vision-capable model (`llm.draft_repurposed_caption`, separate `LLM_VISION_MODEL`/`DEFAULT_VISION_MODEL`) to draft a caption grounded in the actual photo, saved as a `ContentAsset` with `type="repurpose"` and its own `image_path`.
+
+**Dashboard digest** (`dashboard.py`): `POST /dashboard/digest` re-queries the same flagged-order/low-stock/needs-review signals used by Orders, Inventory, and Inbox and asks `llm.draft_dashboard_digest` for a short Indonesian-language bullet summary — a read-only AI rollup, not its own stored/approved artifact like messages or content_assets.
 
 **No message broker.** This was a deliberate scoping decision (see the architecture doc §3): instead of Celery/RabbitMQ, async work (webhook ingestion, AI content generation) runs via FastAPI's in-process `BackgroundTasks`, opening its own `SessionLocal()` DB session per task (see `app/routers/webhooks.py::_ingest_task` and `app/routers/content.py::_generate_content_task` for the pattern).
 
@@ -64,6 +66,7 @@ FastAPI app (`app/main.py`) registering one router per module under `app/routers
 - `draft_order_resolution(order)` — drafts a customer-facing resolution message plus an internal note for a flagged/anomalous order.
 - `draft_broadcast_message(product, platform, context)` — drafts a broadcast/announcement message (e.g. for a low-stock/reorder alert) for a given product+platform.
 - `draft_repurposed_caption(product, platform, image_path)` — sends the actual product photo (base64 data URL) to `vision_model` via `complete_json_with_image` and returns a caption grounded in what's visible in the photo.
+- `draft_dashboard_digest(flagged_orders, low_stock_products, needs_review_messages, product_names)` — summarizes those three signal lists into a short Indonesian bullet digest; returns a canned "all clear" string without calling the LLM if all three are empty.
 
 All call sites wrap the LLM call in `try/except` and store a `[AI ... failed: ...]` string as the draft body on failure rather than raising, so a broken LLM call never drops a queued background job.
 
@@ -73,7 +76,7 @@ The **risk tag flows through to auto-send**: `messages.risk` is a DB column, sur
 
 React 19 + Vite + TypeScript, no state management or routing library — `App.tsx` holds all top-level state (`active` tab, `refreshKey` for forcing page remounts after a demo "simulate" action, `autoReplyEnabled` persisted to `localStorage`) and switches between pages manually. `src/lib/api.ts` is a single typed `fetch` wrapper client — every backend endpoint has a corresponding method there; add new ones there rather than calling `fetch` directly from a page.
 
-Pages live in `src/pages/`: `Dashboard.tsx` (default/landing page — client-side-derived stats from the same list endpoints the other pages use, no dedicated summary endpoint), `Inbox.tsx`, `Orders.tsx`, `Inventory.tsx`, `Content.tsx`. `src/components/Sidebar.tsx` + `icons.tsx` provide left-nav navigation (hand-rolled inline SVG icons, no icon library dependency).
+Pages live in `src/pages/`: `Dashboard.tsx` (default/landing page — stats derived client-side from the same list endpoints the other pages use, plus an AI digest fetched from `POST /dashboard/digest`), `Inbox.tsx`, `Orders.tsx`, `Inventory.tsx`, `Content.tsx`. `src/components/Sidebar.tsx` + `icons.tsx` provide left-nav navigation (hand-rolled inline SVG icons, no icon library dependency).
 
 **Design system**: tokens live in `src/index.css` (`--bg`, `--text`, `--accent` etc. — white background, magenta accent `#E6007A`, flat/no-shadow), shared component classes (buttons, tables, divider rows, status pills, the pill-shaped toggle switch, form fields) live in `src/App.css`. Prefer these existing classes over new inline styles or new CSS files.
 

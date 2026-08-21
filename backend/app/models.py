@@ -69,6 +69,7 @@ class Order(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     seller_id: Mapped[int] = mapped_column(ForeignKey("sellers.id"))
+    product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id"), default=None)
     platform: Mapped[str] = mapped_column(String(32))
     platform_order_id: Mapped[str] = mapped_column(String(64))
     status: Mapped[str] = mapped_column(String(32), default="pending")

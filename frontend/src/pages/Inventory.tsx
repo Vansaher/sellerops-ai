@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { api, type InventoryItem, type Product } from "../lib/api";
+import { api, assetUrl, type InventoryItem, type Product } from "../lib/api";
+
+const formatPrice = (price: number) => `Rp${price.toLocaleString("id-ID")}`;
 
 const emptyForm = { name: "", description: "", price: "", sku: "", stockQty: "" };
 
@@ -10,7 +12,8 @@ interface InventoryProps {
 export default function Inventory({ onNavigateToBroadcast }: InventoryProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [view, setView] = useState<"list" | "add">("list");
+  const [view, setView] = useState<"list" | "add" | "edit">("list");
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [restockingId, setRestockingId] = useState<number | null>(null);
   const [restockAmount, setRestockAmount] = useState("");
   const [form, setForm] = useState(emptyForm);
@@ -44,26 +47,55 @@ export default function Inventory({ onNavigateToBroadcast }: InventoryProps) {
     if (!form.name || !form.sku || !form.price) return;
     setSaving(true);
     try {
-      await api.createProduct({
-        name: form.name,
-        description: form.description,
-        price: Number(form.price),
-        sku: form.sku,
-        stock_qty: Number(form.stockQty) || 0,
-      });
+      if (editingProductId !== null) {
+        await api.updateProduct(editingProductId, {
+          name: form.name,
+          description: form.description,
+          price: Number(form.price),
+          sku: form.sku,
+        });
+      } else {
+        await api.createProduct({
+          name: form.name,
+          description: form.description,
+          price: Number(form.price),
+          sku: form.sku,
+          stock_qty: Number(form.stockQty) || 0,
+        });
+      }
       await loadAll();
       setForm(emptyForm);
+      setEditingProductId(null);
       setView("list");
     } finally {
       setSaving(false);
     }
   };
 
-  if (view === "add") {
+  const handleStartEdit = (product: Product) => {
+    setForm({
+      name: product.name,
+      description: product.description,
+      price: String(product.price),
+      sku: product.sku,
+      stockQty: String(product.stock_qty),
+    });
+    setEditingProductId(product.id);
+    setView("edit");
+  };
+
+  const handleCancelForm = () => {
+    setForm(emptyForm);
+    setEditingProductId(null);
+    setView("list");
+  };
+
+  if (view === "add" || view === "edit") {
+    const isEdit = view === "edit";
     return (
       <section>
         <div className="page-header">
-          <h1>Add product</h1>
+          <h1>{isEdit ? "Edit product" : "Add product"}</h1>
           <p>New products are automatically listed on Shopee and TikTok Shop. Instagram stock isn't tracked.</p>
         </div>
         <div className="product-form">
@@ -93,26 +125,21 @@ export default function Inventory({ onNavigateToBroadcast }: InventoryProps) {
             value={form.sku}
             onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
           />
-          <input
-            className="field"
-            type="number"
-            min={0}
-            placeholder="Initial stock"
-            value={form.stockQty}
-            onChange={(e) => setForm((f) => ({ ...f, stockQty: e.target.value }))}
-          />
+          {!isEdit && (
+            <input
+              className="field"
+              type="number"
+              min={0}
+              placeholder="Initial stock"
+              value={form.stockQty}
+              onChange={(e) => setForm((f) => ({ ...f, stockQty: e.target.value }))}
+            />
+          )}
           <div className="btn-row">
             <button type="button" className="btn btn-primary" disabled={saving} onClick={handleSave}>
               Save
             </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => {
-                setForm(emptyForm);
-                setView("list");
-              }}
-            >
+            <button type="button" className="btn" onClick={handleCancelForm}>
               Cancel
             </button>
           </div>
@@ -137,7 +164,9 @@ export default function Inventory({ onNavigateToBroadcast }: InventoryProps) {
       <table className="data-table">
         <thead>
           <tr>
+            <th>Photo</th>
             <th>Product</th>
+            <th>Price</th>
             <th>Stock</th>
             <th>Shopee</th>
             <th>TikTok Shop</th>
@@ -154,9 +183,22 @@ export default function Inventory({ onNavigateToBroadcast }: InventoryProps) {
             return (
               <tr key={product.id}>
                 <td>
+                  {product.image_path ? (
+                    <img
+                      src={assetUrl(product.image_path)}
+                      alt={product.name}
+                      style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 4 }}
+                    />
+                  ) : (
+                    <span className="pill">No photo</span>
+                  )}
+                </td>
+                <td>
                   {product.name}
                   <div className="row-meta">{product.sku}</div>
+                  {product.description && <div className="row-meta">{product.description}</div>}
                 </td>
+                <td>{formatPrice(product.price)}</td>
                 <td>
                   <strong>{product.stock_qty}</strong>
                 </td>
@@ -182,6 +224,11 @@ export default function Inventory({ onNavigateToBroadcast }: InventoryProps) {
                   <span className="inventory-ig-note">Not tracked — manage stock directly in Instagram.</span>
                 </td>
                 <td>
+                  <div className="btn-row">
+                    <button type="button" className="btn" onClick={() => handleStartEdit(product)}>
+                      Edit
+                    </button>
+                  </div>
                   {product.low_stock_reason && (
                     <div>
                       <span className="pill pill-warning">{product.low_stock_reason}</span>

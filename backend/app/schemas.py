@@ -7,6 +7,7 @@ class OrderOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    product_id: int | None = None
     platform: str
     platform_order_id: str
     status: str
@@ -87,6 +88,11 @@ class RepurposeRequest(BaseModel):
     platforms: list[str] = ["shopee", "tiktok", "instagram"]
 
 
+class DashboardDigest(BaseModel):
+    digest: str
+    generated_at: datetime
+
+
 class ProductOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -106,6 +112,13 @@ class ProductCreate(BaseModel):
     price: float
     sku: str
     stock_qty: int = 0
+
+
+class ProductUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    price: float | None = None
+    sku: str | None = None
 
 
 class RestockRequest(BaseModel):

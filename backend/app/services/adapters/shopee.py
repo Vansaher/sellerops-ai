@@ -9,6 +9,12 @@ _CUSTOMERS = [
     {"thread_id": "SHP-THREAD-1004", "name": "Andi Pratama"},
 ]
 
+# SKUs listed on this seller's Shopee storefront — matches the seeded catalog
+# (see app/seed.py). A real adapter would read the item SKU straight off the
+# platform's own order payload; the mock picks from the same catalog instead
+# of inventing SKUs the seller doesn't actually sell.
+_SKUS = ["FLR-ROSE-01", "FLR-SUN-01", "FLR-BOARD-01", "FLR-ORCHID-01", "FLR-CONDOL-01"]
+
 _FIXTURE_MESSAGES = [
     "Halo kak, pesanan saya kapan dikirim ya?",
     "Apakah stok warna hitam masih ada?",
@@ -32,6 +38,7 @@ class ShopeeAdapter(PlatformAdapter):
                 "status": "pending",
                 "customer_ref": f"cust_{random.randint(1000, 9999)}",
                 "amount": round(random.uniform(50_000, 500_000), 2),
+                "sku": random.choice(_SKUS),
             }
             for _ in range(n)
         ]
